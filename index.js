@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 
 import folderRoutes from './routes/folderRoutes.js'
+import fileRoutes from './routes/fileRoutes.js'
 
 dotenv.config({ path: '.env.local' })
 const app = express()
@@ -15,6 +16,7 @@ app.get('/', (req, res) => {
 })
 
 app.use('/folders', folderRoutes)
+app.use('/files', fileRoutes)
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`)
