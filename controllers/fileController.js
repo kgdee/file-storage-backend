@@ -11,9 +11,11 @@ export const getFile = async (req, res) => {
 }
 
 export const uploadFile = async (req, res) => {
-  const { file, folderId } = req.body
+  
+  if (!req.file) return res.status(400).send('No file uploaded.');
+  const folderId = req.body.folderId || null
   try {
-    const result = await firebase.uploadFile(file, folderId, ()=>{})
+    const result = await firebase.uploadFile(req.file, folderId, ()=>{})
     res.status(201).send(result)
   } catch (error) {
     res.status(500).send(error.message)

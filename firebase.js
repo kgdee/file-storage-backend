@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore'
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc } from 'firebase/firestore'
 
 import dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
@@ -152,38 +152,49 @@ const getFile = async (fileId) => {
 
 const uploadFile = async (file, folderId, callback) => {
   try {
-    callback(0)
+    // Initial callback to signal the start of the upload process
+    callback(0);
+    console.log(file.originalname, folderId);
+
+    // Add file metadata to Firestore
     const fileRef = await addDoc(collection(db, 'files'), {
-      name: file.name,
+      name: file.originalname,
       folder: folderId,
       type: "file",
       createdAt: serverTimestamp()
-    })
+    });
 
-    const storageRef = storage.ref().child(`files/${fileRef.id}/${file.name}`);
-    const task = storageRef.put(file);
+    // Create a reference to the storage location
+    const storageRef = ref(storage, `files/${fileRef.id}/${file.originalname}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    // Update progress bar and progress status
-    task.on('state_changed', 
-      function progress(snapshot) {
+    // Monitor upload progress
+    uploadTask.on('state_changed', 
+      (snapshot) => {
         const percentage = (snapshot.bytesTransferred / snapshot.totalBytes) * 90;
-        callback(percentage)
+        callback(percentage);
+      }, 
+      (error) => {
+        console.error("Upload failed:", error);
+        callback(null);
+      },
+      async () => {
+        // Get download URL after upload is complete
+        const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+        callback(95);
+
+        // Update Firestore document with the file URL
+        await updateDoc(fileRef, { url: fileUrl });
+        callback(100);
+
+        console.log("File uploaded successfully.");
+        setTimeout(() => callback(null), 500);
       }
-    )
-
-    await storageRef.put(file);
-    const fileUrl = await storageRef.getDownloadURL();
-    callback(95)
-    await fileRef.update({ url: fileUrl })
-    callback(100)
-
-    console.log("File uploaded successfully.");
-    setTimeout(()=>callback(null), 500)
-
+    );
   } catch (error) {
-    console.error(error);
+    console.error("Error uploading file:", error)
   }
-}
+};
 
 const deleteFile = async (fileId, callback) => {
   try {
