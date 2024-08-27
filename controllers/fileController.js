@@ -11,7 +11,7 @@ export const getFile = async (req, res) => {
 }
 
 export const uploadFile = async (req, res) => {
-  
+  console.log("file buffer: ", req.file.buffer)
   if (!req.file) return res.status(400).send('No file uploaded.');
   const folderId = req.body.folderId || null
   try {

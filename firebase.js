@@ -167,7 +167,7 @@ const uploadFile = async (file, folderId, callback) => {
     // Create a reference to the storage location
     const storageRef = ref(storage, `files/${fileRef.id}/${file.originalname}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
-
+    
     // Monitor upload progress
     uploadTask.on('state_changed', 
       (snapshot) => {
