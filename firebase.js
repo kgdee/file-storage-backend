@@ -6,6 +6,8 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs
 import dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
 
+import { v4 as uuidv4 } from 'uuid';
+
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -154,7 +156,6 @@ const uploadFile = async (file, folderId, callback) => {
   try {
     // Initial callback to signal the start of the upload process
     callback(0);
-    console.log(file.originalname, folderId);
 
     // Add file metadata to Firestore
     const fileRef = await addDoc(collection(db, 'files'), {
@@ -166,7 +167,10 @@ const uploadFile = async (file, folderId, callback) => {
 
     // Create a reference to the storage location
     const storageRef = ref(storage, `files/${fileRef.id}/${file.originalname}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const metadata = {
+      contentType: file.mimetype,
+    }  
+    const uploadTask = uploadBytesResumable(storageRef, file.buffer, metadata);
     
     // Monitor upload progress
     uploadTask.on('state_changed', 

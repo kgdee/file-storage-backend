@@ -3,7 +3,9 @@ import { getFile, uploadFile, deleteFile, listFiles, createTxt } from '../contro
 
 import multer from 'multer'
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
 const router = express.Router();
 
