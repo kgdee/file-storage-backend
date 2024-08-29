@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/:id', getFile);
 router.post('/', upload.single('file'), uploadFile);
 router.delete('/:id', deleteFile);
-router.get('/folder/:folderId', listFiles);
+router.get('/list/:id', listFiles);
 router.post('/txt', createTxt)
 
 

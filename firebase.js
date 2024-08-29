@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc } from 'firebase/firestore'
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, listAll, deleteObject } from "firebase/storage";
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 
 import dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
@@ -149,6 +149,7 @@ const getFile = async (fileId) => {
 
   } catch (error) {
     console.error(error)
+    throw new Error('Could not retrieve file');
   }
 }
 
@@ -196,69 +197,110 @@ const uploadFile = async (file, folderId, callback) => {
       }
     );
   } catch (error) {
-    console.error("Error uploading file:", error)
+    console.error(error)
+    throw new Error('Could not upload file');
   }
 };
 
-const deleteFile = async (fileId, callback) => {
+
+async function deleteFile(fileId, callback) {
   try {
-    callback(0)
-    const itemRef = storage.ref().child(`files/${fileId}`)
-    const listResult = await itemRef.listAll();
+    callback(0);
+    const itemRef = ref(storage, `files/${fileId}`);
+    const listResult = await listAll(itemRef);
 
     for (const fileRef of listResult.items) {
-      await fileRef.delete();
+      await deleteObject(fileRef);
       console.log(`${fileRef.name} deleted successfully`);
     }
-    callback(50)
-    const fileRef = db.collection("files").doc(fileId);
-    await fileRef.delete();
+
+    callback(50);
+    await deleteDoc(doc(db, "files", fileId));
     console.log(`File with ID ${fileId} successfully deleted.`);
-    callback(100)
-    setTimeout(()=>callback(null), 500);
 
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-// Function to list folders and files in a specific folder
-const listFiles = (folderId, callback) => {
-  let result = { folders: [], files: [] }
-
-  // Cleanup previous listeners
-  if (currentListeners.foldersListener) currentListeners.foldersListener()
-  if (currentListeners.filesListener) currentListeners.filesListener()
-
-  try {
-    // Listen for changes to the folders collection
-    const foldersListener = db.collection("folders").where("parent", "==", folderId)
-    .onSnapshot((querySnapshot) => {
-      result.folders = []
-      querySnapshot.forEach((doc) => {
-        const folderData = doc.data();
-        result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type })
-      });
-      callback(result)
-    });
-    
-    // Listen for changes to the files collection
-    const filesListener = db.collection("files").where("folder", "==", folderId)
-    .onSnapshot((querySnapshot) => {
-      result.files = []
-      querySnapshot.forEach((doc) => {
-        const fileData = doc.data();
-        result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type })
-      });
-      callback(result)
-    });
-    
-    currentListeners = { foldersListener, filesListener }
+    callback(100);
+    setTimeout(() => callback(null), 500);
 
   } catch (error) {
     console.error(error);
+    throw new Error('Could not delete file')
   }
 }
+
+
+// // Function to list folders and files in a specific folder
+// const listFiles = async (folderId) => {
+//   let result = { folders: [], files: [] }
+
+//   // Cleanup previous listeners
+//   currentListeners?.foldersListener?.()
+//   currentListeners?.filesListener?.()
+
+//   try {
+//     // Listen for changes to the folders collection
+//     const foldersQuery = query(collection(db, "folders"), where("parent", "==", folderId))
+//     const foldersListener = onSnapshot(foldersQuery, (querySnapshot) => {
+//       result.folders = []
+//       querySnapshot.forEach((doc) => {
+//         const folderData = doc.data();
+//         result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type })
+//       });
+//       // callback(result)
+//     });
+    
+//     // Listen for changes to the files collection
+//     const filesQuery = query(collection(db, "files"), where("folder", "==", folderId))
+//     const filesListener = onSnapshot(filesQuery, (querySnapshot) => {
+//       result.files = []
+//       querySnapshot.forEach((doc) => {
+//         const fileData = doc.data();
+//         result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type })
+//       });
+//       // callback(result)
+//     });
+    
+//     currentListeners = { foldersListener, filesListener }
+//     return result
+
+//   } catch (error) {
+//     console.error(error)
+//     throw new Error('Could not list files')
+//   }
+// }
+
+const listFiles = async (folderId, socket) => {
+  let result = { folders: [], files: [] };
+
+    // Listen for changes to the folders collection
+    const foldersQuery = query(collection(db, "folders"), where("parent", "==", folderId))
+    const foldersListener = onSnapshot(foldersQuery, (querySnapshot) => {
+      result.folders = [];
+      querySnapshot.forEach((doc) => {
+        const folderData = doc.data();
+        result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type });
+      });
+      socket.emit('updateFiles', result);  // Send updates to the client
+    });
+
+    // Listen for changes to the files collection
+    const filesQuery = query(collection(db, "files"), where("folder", "==", folderId));
+    const filesListener = onSnapshot(filesQuery, (querySnapshot) => {
+      result.files = [];
+      querySnapshot.forEach((doc) => {
+        const fileData = doc.data();
+        result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type });
+      });
+      socket.emit('updateFiles', result);  // Send updates to the client
+    });
+
+    // Cleanup listeners on disconnect
+    socket.on('disconnect', () => {
+      foldersListener();
+      filesListener();
+      console.log('Client disconnected');
+    });
+};
+
 
 const createTxt = async (data, folderId, callback) => {
   
