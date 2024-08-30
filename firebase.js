@@ -238,7 +238,6 @@ const listFiles = async (folderId, socket) => {
   
   unsubscribeListeners(socket)
   let unsubscribes = new Array(2)
-  console.log(unsubscribes)
   let result = { folders: [], files: [] };
 
   // Listen for changes to the folders collection
