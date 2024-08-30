@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Listeners</title>
+</head>
+<body>
+  <h1>Hello World!</h1>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Socket Id</th>
+        <th>Listeners</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (let socketId in listeners) { %>
+        <tr>
+          <td><%= socketId %></td>
+          <td>
+            <ul>
+              <% listeners[socketId].forEach(item => { %>
+                <li><%= item %></li>
+              <% }); %>
+            </ul>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+</body>
+</html>

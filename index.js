@@ -13,6 +13,7 @@ dotenv.config({ path: '.env.local' })
 const app = express()
 app.use(express.json())
 app.use(cors())
+app.set('view engine', 'ejs');
 
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
@@ -38,8 +39,9 @@ io.on('connection', (socket) => {
   });
 });
 
+
 app.get('/', (req, res) => {
-  res.send('Hello World!' + Array.from(firebase.currentListeners))
+  res.render('index', { listeners: Object.fromEntries(firebase.currentListeners) });
 })
 
 app.use('/folders', folderRoutes)
@@ -47,4 +49,4 @@ app.use('/files', fileRoutes)
 
 
 const PORT = process.env.PORT || 3000
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+server.listen(PORT, () => console.log(`Server is running on port ${PORT}`))
