@@ -228,78 +228,58 @@ async function deleteFile(fileId, callback) {
 }
 
 
-// // Function to list folders and files in a specific folder
-// const listFiles = async (folderId) => {
-//   let result = { folders: [], files: [] }
 
-//   // Cleanup previous listeners
-//   currentListeners?.foldersListener?.()
-//   currentListeners?.filesListener?.()
 
-//   try {
-//     // Listen for changes to the folders collection
-//     const foldersQuery = query(collection(db, "folders"), where("parent", "==", folderId))
-//     const foldersListener = onSnapshot(foldersQuery, (querySnapshot) => {
-//       result.folders = []
-//       querySnapshot.forEach((doc) => {
-//         const folderData = doc.data();
-//         result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type })
-//       });
-//       // callback(result)
-//     });
-    
-//     // Listen for changes to the files collection
-//     const filesQuery = query(collection(db, "files"), where("folder", "==", folderId))
-//     const filesListener = onSnapshot(filesQuery, (querySnapshot) => {
-//       result.files = []
-//       querySnapshot.forEach((doc) => {
-//         const fileData = doc.data();
-//         result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type })
-//       });
-//       // callback(result)
-//     });
-    
-//     currentListeners = { foldersListener, filesListener }
-//     return result
 
-//   } catch (error) {
-//     console.error(error)
-//     throw new Error('Could not list files')
-//   }
-// }
+// Track listeners for each client
+const currentListeners = new Map();
 
 const listFiles = async (folderId, socket) => {
+  
+  unsubscribeListeners(socket)
+  let unsubscribes = new Array(2)
+  console.log(unsubscribes)
   let result = { folders: [], files: [] };
 
-    // Listen for changes to the folders collection
-    const foldersQuery = query(collection(db, "folders"), where("parent", "==", folderId))
-    const foldersListener = onSnapshot(foldersQuery, (querySnapshot) => {
-      result.folders = [];
-      querySnapshot.forEach((doc) => {
-        const folderData = doc.data();
-        result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type });
-      });
-      socket.emit('updateFiles', result);  // Send updates to the client
+  // Listen for changes to the folders collection
+  const foldersQuery = query(collection(db, "folders"), where("parent", "==", folderId))
+  unsubscribes[0] = onSnapshot(foldersQuery, (querySnapshot) => {
+    result.folders = [];
+    querySnapshot.forEach((doc) => {
+      const folderData = doc.data();
+      result.folders.push({ id: doc.id, name: folderData.name, type: folderData.type });
     });
+    socket.emit('updateFiles', result)
+  });
 
-    // Listen for changes to the files collection
-    const filesQuery = query(collection(db, "files"), where("folder", "==", folderId));
-    const filesListener = onSnapshot(filesQuery, (querySnapshot) => {
-      result.files = [];
-      querySnapshot.forEach((doc) => {
-        const fileData = doc.data();
-        result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type });
-      });
-      socket.emit('updateFiles', result);  // Send updates to the client
+  // Listen for changes to the files collection
+  const filesQuery = query(collection(db, "files"), where("folder", "==", folderId));
+  unsubscribes[1] = onSnapshot(filesQuery, (querySnapshot) => {
+    result.files = [];
+    querySnapshot.forEach((doc) => {
+      const fileData = doc.data();
+      result.files.push({ id: doc.id, name: fileData.name, url: fileData.url, type: fileData.type });
     });
+    socket.emit('updateFiles', result)
+  });
 
-    // Cleanup listeners on disconnect
-    socket.on('disconnect', () => {
-      foldersListener();
-      filesListener();
-      console.log('Client disconnected');
-    });
+  if (!currentListeners.has(socket.id)) {
+    currentListeners.set(socket.id, []);
+    currentListeners.get(socket.id).push(unsubscribes[0]);
+    currentListeners.get(socket.id).push(unsubscribes[1]);
+  }
 };
+
+
+const unsubscribeListeners = (socket) => {
+  const listeners = currentListeners.get(socket.id);
+  if (listeners) {
+    listeners.forEach(unsubscribe => unsubscribe());
+    currentListeners.delete(socket.id);
+  }
+}
+
+
 
 
 const createTxt = async (data, folderId, callback) => {
@@ -319,4 +299,4 @@ const createTxt = async (data, folderId, callback) => {
 }
 
 
-export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, createTxt }
+export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, currentListeners, unsubscribeListeners, createTxt }

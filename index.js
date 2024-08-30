@@ -31,10 +31,15 @@ io.on('connection', (socket) => {
     
     firebase.listFiles(folderId, socket)
   });
+
+  socket.on('disconnect', () => {
+    firebase.unsubscribeListeners(socket)
+    console.log('Client disconnected');
+  });
 });
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
+  res.send('Hello World!' + Array.from(firebase.currentListeners))
 })
 
 app.use('/folders', folderRoutes)
