@@ -232,7 +232,7 @@ async function deleteFile(fileId, callback) {
 
 
 // Track listeners for each client
-const currentListeners = new Map();
+const activeListeners = new Map();
 
 const listFiles = async (folderId, socket) => {
   
@@ -262,19 +262,19 @@ const listFiles = async (folderId, socket) => {
     socket.emit('updateFiles', result)
   });
 
-  if (!currentListeners.has(socket.id)) {
-    currentListeners.set(socket.id, []);
-    currentListeners.get(socket.id).push(unsubscribes[0]);
-    currentListeners.get(socket.id).push(unsubscribes[1]);
+  if (!activeListeners.has(socket.id)) {
+    activeListeners.set(socket.id, []);
+    activeListeners.get(socket.id).push(unsubscribes[0]);
+    activeListeners.get(socket.id).push(unsubscribes[1]);
   }
 };
 
 
 const unsubscribeListeners = (socket) => {
-  const listeners = currentListeners.get(socket.id);
+  const listeners = activeListeners.get(socket.id);
   if (listeners) {
     listeners.forEach(unsubscribe => unsubscribe());
-    currentListeners.delete(socket.id);
+    activeListeners.delete(socket.id);
   }
 }
 
@@ -298,4 +298,4 @@ const createTxt = async (data, folderId, callback) => {
 }
 
 
-export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, currentListeners, unsubscribeListeners, createTxt }
+export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, activeListeners, unsubscribeListeners, createTxt }

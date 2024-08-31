@@ -1,6 +1,7 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
+import path from 'path'
 
 import folderRoutes from './routes/folderRoutes.js'
 import fileRoutes from './routes/fileRoutes.js'
@@ -11,6 +12,7 @@ import firebase from "./firebase.js"
 
 dotenv.config({ path: '.env.local' })
 const app = express()
+app.use(express.static(path.resolve('public')))
 app.use(express.json())
 app.use(cors())
 app.set('view engine', 'ejs');
@@ -41,7 +43,7 @@ io.on('connection', (socket) => {
 
 
 app.get('/', (req, res) => {
-  res.render('index', { listeners: Object.fromEntries(firebase.currentListeners) });
+  res.render('index', { listeners: Object.fromEntries(firebase.activeListeners) });
 })
 
 app.use('/folders', folderRoutes)
