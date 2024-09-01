@@ -11,33 +11,30 @@
 </head>
 <body>
   <div class="app container">
-
-    <script>
-      testCall("<%= JSON.stringify(listeners) %>")
-    </script>
-
     <h1>Hello World!</h1>
-    
-    <table>
-      <thead>
-        <tr>
-          <th>Socket Id</th>
-          <th>Listener Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% for (let socketId in listeners) { %>
-          <tr>
-            <td><%= socketId %></td>
-            <td>
-              <%= listeners[socketId].length %>
-            </td>
-          </tr>
-        <% } %>
-      </tbody>
-    </table>
 
-    <h1><%= Object.keys(listeners).length <= 0 ? "No Active Listeners" : "" %></h1>
+    <% if (Object.keys(listeners).length > 0) { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Socket Id</th>
+            <th>Listener Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (let socketId in listeners) { %>
+            <tr>
+              <td><%= socketId %></td>
+              <td>
+                <%= listeners[socketId].length %>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <h1>No Active Listeners</h1>
+    <% } %>
   </div>
 </body>
 </html>

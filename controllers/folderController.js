@@ -11,7 +11,7 @@ export const getFolder = async (req, res) => {
 };
 
 export const createFolder = async (req, res) => {
-  const { folderName, parentFolderId } = req.body;
+  const { folderName, parentFolderId = null } = req.body;
   try {
     const result = await firebase.createFolder(folderName, parentFolderId, ()=>{});
     res.status(201).send(result);

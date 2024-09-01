@@ -32,5 +32,12 @@ export const deleteFile = async (req, res) => {
 }
 
 export const createTxt = async (req, res) => {
-
+  const { name, content, folderId } = req.body
+  
+  try {
+    const result = await firebase.createTxt(name, content, folderId, ()=>{})
+    res.status(201).send(result)
+  } catch (error) {
+    res.status(500).send(error.message)
+  }
 }

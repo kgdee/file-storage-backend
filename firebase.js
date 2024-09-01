@@ -158,20 +158,25 @@ const uploadFile = async (file, folderId, callback) => {
     // Initial callback to signal the start of the upload process
     callback(0);
 
+    const isMulterFile = file.originalname && file.buffer
+    const fileName = isMulterFile ? file.originalname : file.name;
+    const fileType = isMulterFile ? file.mimetype : file.type;
+    const fileBuffer = isMulterFile ? file.buffer : new Uint8Array(await file.arrayBuffer());
+
     // Add file metadata to Firestore
     const fileRef = await addDoc(collection(db, 'files'), {
-      name: file.originalname,
+      name: fileName,
       folder: folderId,
       type: "file",
       createdAt: serverTimestamp()
     });
 
     // Create a reference to the storage location
-    const storageRef = ref(storage, `files/${fileRef.id}/${file.originalname}`);
+    const storageRef = ref(storage, `files/${fileRef.id}/${fileName}`);
     const metadata = {
-      contentType: file.mimetype,
+      contentType: fileType,
     }  
-    const uploadTask = uploadBytesResumable(storageRef, file.buffer, metadata);
+    const uploadTask = uploadBytesResumable(storageRef, fileBuffer, metadata);
     
     // Monitor upload progress
     uploadTask.on('state_changed', 
@@ -279,11 +284,7 @@ const unsubscribeListeners = (socket) => {
 }
 
 
-
-
-const createTxt = async (data, folderId, callback) => {
-  
-  const { name, content } = data
+const createTxt = async (name, content, folderId, callback) => {
 
   if (!content) return
 
