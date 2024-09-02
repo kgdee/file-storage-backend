@@ -3,8 +3,6 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, listAll, deleteObject } from "firebase/storage";
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 
-import dotenv from 'dotenv'
-dotenv.config({ path: '.env.local' })
 
 import { v4 as uuidv4 } from 'uuid';
 

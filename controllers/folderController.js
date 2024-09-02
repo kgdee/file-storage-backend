@@ -1,7 +1,7 @@
 import firebase from '../firebase.js'
 
 export const getFolder = async (req, res) => {
-  const folderId = req.params.id;
+  let folderId = req.params.id;
   try {
     const folder = await firebase.getFolder(folderId);
     res.status(200).json(folder);
