@@ -26,6 +26,7 @@ const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
 const storage = getStorage(app)
 
+import { io } from "./index.js"
 
 // Retrieve a folder by ID
 const getFolder = async (folderId) => {
@@ -49,9 +50,9 @@ const getFolder = async (folderId) => {
 };
 
 // Create a new folder
-const createFolder = async (folderName, parentFolderId, callback) => {
+const createFolder = async (folderName, parentFolderId) => {
   try {
-    callback(0);
+    io.emit('progress', 0)
     let path = [];
 
     if (parentFolderId) {
@@ -59,7 +60,7 @@ const createFolder = async (folderName, parentFolderId, callback) => {
       path = [...parentFolder.path, parentFolderId];
     }
 
-    callback(50);
+    io.emit('progress', 50)
 
     const folderRef = await addDoc(collection(db, 'folders'), {
       name: folderName,
@@ -69,8 +70,9 @@ const createFolder = async (folderName, parentFolderId, callback) => {
       createdAt: serverTimestamp(),
     })
 
+    io.emit('progress', 100)
     console.log('Folder created with ID:', folderRef.id);
-    callback(100);
+    
     return { id: folderRef.id, name: folderName, parent: parentFolderId };
   } catch (error) {
     console.error(error);
@@ -79,9 +81,9 @@ const createFolder = async (folderName, parentFolderId, callback) => {
 };
 
 // Delete a folder by ID
-const deleteFolder = async (folderId, callback) => {
+const deleteFolder = async (folderId) => {
   try {
-    callback(0);
+    io.emit('progress', 0)
 
     const q = query(collection(db, 'folders'), where('path', 'array-contains', folderId));
     const querySnapshot = await getDocs(q)
@@ -91,13 +93,13 @@ const deleteFolder = async (folderId, callback) => {
       await deleteFilesInFolder(doc.id);
       await deleteFolderDoc(doc.id);
 
-      callback((90 / querySnapshot.size) * (i + 1));
+      io.emit('progress', (90 / querySnapshot.size) * (i + 1))
     }
 
     await deleteFilesInFolder(folderId);
     await deleteFolderDoc(folderId);
 
-    callback(100);
+    io.emit('progress', 100)
     return `Folder with ID ${folderId} successfully deleted.`;
   } catch (error) {
     console.error(error);
@@ -133,8 +135,6 @@ const deleteFolderDoc = async (folderId) => {
 };
 
 
-
-
 const getFile = async (fileId) => {
   try {
     const docRef = doc(db, 'files', fileId);
@@ -153,10 +153,9 @@ const getFile = async (fileId) => {
   }
 }
 
-const uploadFile = async (file, folderId, callback) => {
+const uploadFile = async (file, folderId) => {
   try {
-    // Initial callback to signal the start of the upload process
-    callback(0);
+    io.emit('progress', 0)
 
     const isMulterFile = file.originalname && file.buffer
     const fileName = isMulterFile ? file.originalname : file.name;
@@ -182,23 +181,22 @@ const uploadFile = async (file, folderId, callback) => {
     uploadTask.on('state_changed', 
       (snapshot) => {
         const percentage = (snapshot.bytesTransferred / snapshot.totalBytes) * 90;
-        callback(percentage);
+        io.emit('progress', percentage)
       }, 
       (error) => {
         console.error("Upload failed:", error);
-        callback(null);
+        io.emit('progress', null)
       },
       async () => {
         // Get download URL after upload is complete
         const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-        callback(95);
+        io.emit('progress', 95)
 
         // Update Firestore document with the file URL
         await updateDoc(fileRef, { url: fileUrl });
-        callback(100);
+        io.emit('progress', 100)
 
         console.log("File uploaded successfully.");
-        setTimeout(() => callback(null), 500);
       }
     );
   } catch (error) {
@@ -208,9 +206,9 @@ const uploadFile = async (file, folderId, callback) => {
 };
 
 
-async function deleteFile(fileId, callback) {
+async function deleteFile(fileId) {
   try {
-    callback(0);
+    io.emit('progress', 0)
     const itemRef = ref(storage, `files/${fileId}`);
     const listResult = await listAll(itemRef);
 
@@ -219,13 +217,11 @@ async function deleteFile(fileId, callback) {
       console.log(`${fileRef.name} deleted successfully`);
     }
 
-    callback(50);
+    io.emit('progress', 50)
     await deleteDoc(doc(db, "files", fileId));
+    
+    io.emit('progress', 100)
     console.log(`File with ID ${fileId} successfully deleted.`);
-
-    callback(100);
-    setTimeout(() => callback(null), 500);
-
   } catch (error) {
     console.error(error);
     throw new Error('Could not delete file')
@@ -284,18 +280,13 @@ const unsubscribeListeners = (socket) => {
 }
 
 
-const createTxt = async (name, content, folderId, callback) => {
+const createTxt = async (name, content, folderId) => {
 
   if (!content) return
-
-  callback(0)
 
   const file = new File([content], `${name}.txt`, { type: "text/plain" });
 
   await uploadFile(file, folderId, ()=>{});
-
-  callback(100)
-  setTimeout(()=>callback(null), 500)
 }
 
 
