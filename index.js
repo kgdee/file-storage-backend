@@ -3,11 +3,12 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
 
+import http from 'http'
+import { Server as SocketIOServer } from 'socket.io';
+
 import folderRoutes from './routes/folderRoutes.js'
 import fileRoutes from './routes/fileRoutes.js'
 
-import http from 'http'
-import { Server as SocketIOServer } from 'socket.io';
 import firebase from "./firebase.js"
 
 dotenv.config({ path: '.env.local' })
@@ -26,6 +27,8 @@ const io = new SocketIOServer(server, {
     credentials: true
   }
 });
+
+firebase.setup(io)
 
 io.on('connection', (socket) => {
   console.log('New client connected');
@@ -52,5 +55,3 @@ app.use('/files', fileRoutes)
 
 const PORT = process.env.PORT || 3000
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`))
-
-export default { io }

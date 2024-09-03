@@ -5,28 +5,33 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs
 
 import { v4 as uuidv4 } from 'uuid';
 
-import dotenv from 'dotenv'
-dotenv.config({ path: '.env.local' })
-
-
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
+let firebaseConfig = null
+let app = null
+let db = null
+let storage = null
+
+let io = null
+
+function setup(newIo) {
+  firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_APP_ID,
+  }
+
+  app = initializeApp(firebaseConfig)
+  db = getFirestore(app)
+  storage = getStorage(app)
+
+  io = newIo
 }
-
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
-const storage = getStorage(app)
-
-import indexjs from "./index.js"
 
 // Retrieve a folder by ID
 const getFolder = async (folderId) => {
@@ -34,12 +39,12 @@ const getFolder = async (folderId) => {
   if (!folderId) return rootFolder
 
   try {
-    indexjs.io.emit('progress', 0)
+    io.emit('progress', 0)
 
     const docRef = doc(db, 'folders', folderId);
     const docSnap = await getDoc(docRef);
 
-    indexjs.io.emit('progress', 100)
+    io.emit('progress', 100)
 
     if (docSnap.exists()) {
       const docData = docSnap.data();
@@ -57,7 +62,7 @@ const getFolder = async (folderId) => {
 // Create a new folder
 const createFolder = async (folderName, parentFolderId) => {
   try {
-    indexjs.io.emit('progress', 0)
+    io.emit('progress', 0)
     let path = [];
 
     if (parentFolderId) {
@@ -65,7 +70,7 @@ const createFolder = async (folderName, parentFolderId) => {
       path = [...parentFolder.path, parentFolderId];
     }
 
-    indexjs.io.emit('progress', 50)
+    io.emit('progress', 50)
 
     const folderRef = await addDoc(collection(db, 'folders'), {
       name: folderName,
@@ -75,7 +80,7 @@ const createFolder = async (folderName, parentFolderId) => {
       createdAt: serverTimestamp(),
     })
 
-    indexjs.io.emit('progress', 100)
+    io.emit('progress', 100)
     console.log('Folder created with ID:', folderRef.id);
     
     return { id: folderRef.id, name: folderName, parent: parentFolderId };
@@ -88,7 +93,7 @@ const createFolder = async (folderName, parentFolderId) => {
 // Delete a folder by ID
 const deleteFolder = async (folderId) => {
   try {
-    indexjs.io.emit('progress', 0)
+    io.emit('progress', 0)
 
     const q = query(collection(db, 'folders'), where('path', 'array-contains', folderId));
     const querySnapshot = await getDocs(q)
@@ -98,13 +103,13 @@ const deleteFolder = async (folderId) => {
       await deleteFilesInFolder(doc.id);
       await deleteFolderDoc(doc.id);
 
-      indexjs.io.emit('progress', (90 / querySnapshot.size) * (i + 1))
+      io.emit('progress', (90 / querySnapshot.size) * (i + 1))
     }
 
     await deleteFilesInFolder(folderId);
     await deleteFolderDoc(folderId);
 
-    indexjs.io.emit('progress', 100)
+    io.emit('progress', 100)
     return `Folder with ID ${folderId} successfully deleted.`;
   } catch (error) {
     console.error(error);
@@ -160,7 +165,7 @@ const getFile = async (fileId) => {
 
 const uploadFile = async (file, folderId) => {
   try {
-    indexjs.io.emit('progress', 0)
+    io.emit('progress', 0)
 
     const isMulterFile = file.originalname && file.buffer
     const fileName = isMulterFile ? file.originalname : file.name;
@@ -186,20 +191,20 @@ const uploadFile = async (file, folderId) => {
     uploadTask.on('state_changed', 
       (snapshot) => {
         const percentage = (snapshot.bytesTransferred / snapshot.totalBytes) * 90;
-        indexjs.io.emit('progress', percentage)
+        io.emit('progress', percentage)
       }, 
       (error) => {
         console.error("Upload failed:", error);
-        indexjs.io.emit('progress', null)
+        io.emit('progress', null)
       },
       async () => {
         // Get download URL after upload is complete
         const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-        indexjs.io.emit('progress', 95)
+        io.emit('progress', 95)
 
         // Update Firestore document with the file URL
         await updateDoc(fileRef, { url: fileUrl });
-        indexjs.io.emit('progress', 100)
+        io.emit('progress', 100)
 
         console.log("File uploaded successfully.");
       }
@@ -213,7 +218,7 @@ const uploadFile = async (file, folderId) => {
 
 async function deleteFile(fileId) {
   try {
-    indexjs.io.emit('progress', 0)
+    io.emit('progress', 0)
     const itemRef = ref(storage, `files/${fileId}`);
     const listResult = await listAll(itemRef);
 
@@ -222,10 +227,10 @@ async function deleteFile(fileId) {
       console.log(`${fileRef.name} deleted successfully`);
     }
 
-    indexjs.io.emit('progress', 50)
+    io.emit('progress', 50)
     await deleteDoc(doc(db, "files", fileId));
     
-    indexjs.io.emit('progress', 100)
+    io.emit('progress', 100)
     console.log(`File with ID ${fileId} successfully deleted.`);
   } catch (error) {
     console.error(error);
@@ -295,4 +300,4 @@ const createTxt = async (name, content, folderId) => {
 }
 
 
-export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, activeListeners, unsubscribeListeners, createTxt }
+export default { getFolder, createFolder, deleteFolder, getFile, uploadFile, deleteFile, listFiles, activeListeners, unsubscribeListeners, createTxt, setup }
