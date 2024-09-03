@@ -3,7 +3,7 @@ import { getFolder, createFolder, deleteFolder } from '../controllers/folderCont
 
 const router = express.Router();
 
-router.get('/:id', getFolder);
+router.get('/:id?', getFolder);
 router.post('/', createFolder);
 router.delete('/:id', deleteFolder);
 

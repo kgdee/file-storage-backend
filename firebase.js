@@ -6,6 +6,9 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs
 
 import { v4 as uuidv4 } from 'uuid';
 
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
+
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -28,19 +31,20 @@ import { io } from "./index.js"
 
 // Retrieve a folder by ID
 const getFolder = async (folderId) => {
-  if (!folderId) return { id: null, name: "My Drive", path: null, type: "root" };
+  const rootFolder = { id: null, name: "My Drive", path: null, type: "root" };
+  if (!folderId) return rootFolder
 
   try {
     const docRef = doc(db, 'folders', folderId);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists) {
+    if (docSnap.exists()) {
       const docData = docSnap.data();
       const folder = { id: docSnap.id, name: docData.name, path: docData.path };
       return folder;
     }
 
-    return null;
+    return rootFolder
   } catch (error) {
     console.error(error);
     throw new Error('Could not retrieve folder');
@@ -138,7 +142,7 @@ const getFile = async (fileId) => {
     const docRef = doc(db, 'files', fileId);
     const docSnap = await getDoc(docRef);
   
-    if (docSnap.exists) {
+    if (docSnap.exists()) {
       const docData = docSnap.data()
       return docData
     }
