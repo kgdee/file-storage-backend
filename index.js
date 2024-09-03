@@ -2,6 +2,9 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
+import { fileURLToPath } from 'url'
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import http from 'http'
 import { Server as SocketIOServer } from 'socket.io';
@@ -16,6 +19,7 @@ const app = express()
 app.use(express.static(path.resolve('public')))
 app.use(express.json())
 app.use(cors())
+app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 const server = http.createServer(app);
