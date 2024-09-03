@@ -18,7 +18,12 @@ dotenv.config({ path: '.env.local' })
 const app = express()
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}))
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
