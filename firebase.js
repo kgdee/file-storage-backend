@@ -35,8 +35,12 @@ const getFolder = async (folderId) => {
   if (!folderId) return rootFolder
 
   try {
+    io.emit('progress', 0)
+
     const docRef = doc(db, 'folders', folderId);
     const docSnap = await getDoc(docRef);
+
+    io.emit('progress', 100)
 
     if (docSnap.exists()) {
       const docData = docSnap.data();
